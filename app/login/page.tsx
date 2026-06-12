@@ -4,15 +4,44 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "@iconify/react";
+import { useForm } from "react-hook-form";
+import { LoginFormData, loginSchema } from "@/lib/zod/login.schema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { LaravelResponse } from "@/lib/api/client";
+import { useToast } from "../components/Toast";
+import { useAuth } from "@/lib/providers/AuthProvider";
 
 export default function LoginPage() {
   const [isShowButton, setIsShowButton] = useState(false);
   const route = useRouter();
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Logging in...");
-    route.replace("/portal");
-  };
+  const { login } = useAuth();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
+
+  const { toast } = useToast();
+
+  const { isPending, mutate } = useMutation({
+    mutationFn: async (values: LoginFormData) => {
+      return await login(values.username, values.password);
+    },
+    onSuccess: () => {
+      toast("Login Sukses", "success");
+    },
+    onError: (err: any) => {
+      toast(err?.message || "Login gagal", "error");
+    },
+  });
 
   return (
     <div className="font-manrope bg-surface text-on-surface selection:bg-primary selection:text-on-primary min-h-screen relative overflow-hidden">
@@ -55,60 +84,72 @@ export default function LoginPage() {
               </button>
             ) : (
               <div className="flex flex-col">
-                <form className="space-y-5" onSubmit={handleSubmit}>
+                <form
+                  className="space-y-5"
+                  onSubmit={handleSubmit((values) => mutate(values))}
+                >
                   <div className="space-y-2">
-                    <label
-                      className="text-[11px] font-black text-on-surface-variant tracking-widest uppercase ml-1"
-                      htmlFor="username"
-                    >
+                    <label className="text-[11px] font-black text-on-surface-variant tracking-widest uppercase ml-1">
                       Username
                     </label>
                     <div className="relative group mt-2">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-primary group-focus-within:text-primary transition-colors">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors">
                         <Icon
                           icon="mdi:account"
-                          className="text-lg text-primary"
+                          className="text-lg text-on-surface-variant/60 group-focus-within:text-primary"
                         />
                       </span>
                       <input
-                        className="block w-full pl-12 pr-4 py-4 bg-surface-container-lowest/80 backdrop-blur-sm border-none text-on-surface placeholder:text-outline/30 focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-300 rounded-2xl"
+                        className="block w-full pl-12 pr-4 py-3.5 bg-surface-container-lowest border-none text-on-surface placeholder:text-outline/30 focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-300 rounded-2xl"
                         id="username"
                         placeholder="Username"
                         type="text"
+                        {...register("username")}
                       />
                     </div>
+
+                    {errors.username && (
+                      <p className="text-red-400 text-xs font-medium flex items-center gap-1 mt-1.5 ml-1">
+                        <Icon icon="mdi:alert-circle" className="text-sm" />
+                        {errors.username.message}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center px-1">
-                      <label
-                        className="text-[11px] font-black text-on-surface-variant tracking-widest uppercase"
-                        htmlFor="password"
-                      >
-                        Kata Sandi
-                      </label>
-                    </div>
-                    <div className="relative group">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">
-                        <Icon icon="mdi:lock" className="text-lg" />
+                    <label className="text-[11px] font-black text-on-surface-variant tracking-widest uppercase ml-1">
+                      Kata Sandi Baru
+                    </label>
+                    <div className="relative group mt-2">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 transition-colors">
+                        <Icon
+                          icon="mdi:lock-reset"
+                          className="text-lg text-on-surface-variant/60 group-focus-within:text-primary"
+                        />
                       </span>
                       <input
-                        className="block w-full pl-12 pr-4 py-4 bg-surface-container-lowest/80 backdrop-blur-sm border-none text-on-surface placeholder:text-outline/30 focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-300 rounded-2xl"
-                        id="password"
-                        placeholder="••••••••"
+                        className="block w-full pl-12 pr-4 py-3.5 bg-surface-container-lowest border-none text-on-surface placeholder:text-outline/30 focus:ring-2 focus:ring-primary/20 outline-none transition-all duration-300 rounded-2xl"
                         type="password"
+                        placeholder="Password"
+                        {...register("password")}
                       />
                     </div>
+                    {errors.password && (
+                      <p className="text-red-400 text-xs font-medium flex items-center gap-1 mt-1.5 ml-1">
+                        <Icon icon="mdi:alert-circle" className="text-sm" />
+                        {errors.password.message}
+                      </p>
+                    )}
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-r from-primary to-primary-container text-on-primary font-black rounded-2xl shadow-lg shadow-primary/10 hover:shadow-primary/25 hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center space-x-3 uppercase tracking-widest text-sm"
+                    disabled={isPending}
+                    className="w-full py-3 bg-gradient-to-r from-primary to-primary-container text-on-primary font-black rounded-2xl shadow-lg shadow-primary/10 hover:shadow-primary/25 hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center space-x-3 uppercase tracking-widest text-sm disabled:opacity-50"
                   >
-                    <span>Masuk</span>
+                    <span>{isPending ? "Loading..." : "Masuk"}</span>
                     <Icon icon="mdi:login" className="text-xl" />
                   </button>
-
                   <button
                     type="button"
                     onClick={() => setIsShowButton(false)}

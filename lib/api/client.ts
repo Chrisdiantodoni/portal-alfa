@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Laravel standard response structure
+import Cookies from "js-cookie";
 export type LaravelResponse<T> = {
   success: boolean;
   message: string;
@@ -13,6 +14,26 @@ export type LaravelResponse<T> = {
   };
   errors?: Record<string, string[]>;
 };
+
+// Tambahkan class ini di bagian atas file
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  errors?: Record<string, string[]>;
+
+  constructor(
+    message: string,
+    status: number,
+    code?: string,
+    errors?: Record<string, string[]>,
+  ) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.errors = errors;
+  }
+}
 
 type ApiOptions = {
   method?: string;
@@ -39,7 +60,7 @@ function buildUrl(url: string, params?: Record<string, any>) {
 
 function getStoredToken(): string | undefined {
   if (typeof window === "undefined") return undefined;
-  return localStorage.getItem("miraco_token") || undefined;
+  return Cookies.get("token");
 }
 
 async function baseFetch<T>(url: string, options?: ApiOptions): Promise<any> {
@@ -53,7 +74,7 @@ async function baseFetch<T>(url: string, options?: ApiOptions): Promise<any> {
       responseType = "json",
     } = options || {};
     const isFormData = body instanceof FormData;
-    // Validate URL
+
     if (!url) {
       throw new Error("URL is required for API call");
     }
@@ -80,14 +101,19 @@ async function baseFetch<T>(url: string, options?: ApiOptions): Promise<any> {
       body: isFormData ? body : body ? JSON.stringify(body) : undefined,
       next: revalidate ? { revalidate } : undefined,
     });
+
     if (responseType === "blob") {
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || `API Error ${res.status}`);
+        // ✅ Gunakan ApiError untuk Blob jika gagal
+        throw new ApiError(
+          errorData.message || `API Error ${res.status}`,
+          res.status,
+          errorData.code,
+        );
       }
 
       const blob = await res.blob();
-
       const contentDisposition = res.headers.get("content-disposition");
 
       return {
@@ -95,21 +121,29 @@ async function baseFetch<T>(url: string, options?: ApiOptions): Promise<any> {
         contentDisposition,
       };
     }
+
     // Parse response
     const responseData = await res.json();
 
     // Check if response is OK
     if (!res.ok) {
-      // Laravel error response
-      const errorMessage =
-        responseData.message || responseData.error || `API Error ${res.status}`;
-      console.log(responseData);
-      throw new Error(errorMessage);
+      // ✅ Lemparkan objek ApiError lengkap dengan status, code, dan validation errors
+      throw new ApiError(
+        responseData.message || responseData.error || `API Error ${res.status}`,
+        res.status,
+        responseData.code, // Catch 'MUST_CHANGE_PASSWORD' dari middleware
+        responseData.errors, // Catch validation errors dari Laravel ($request->validate)
+      );
     }
-    // Return full Laravel response
+
     return responseData as LaravelResponse<T>;
   } catch (error) {
     console.error("API Request failed:", error);
+
+    // ✅ Jika error yang ditangkap adalah instansiasi dari ApiError, teruskan langsung
+    if (error instanceof ApiError) {
+      throw error;
+    }
 
     if (error instanceof Error) {
       throw error;

@@ -3,8 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
+import { useAuth } from "@/lib/providers/AuthProvider";
+import { LogOut, ChevronDown } from "lucide-react";
 
 export function ProfileDropdown() {
+  const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
@@ -32,9 +35,8 @@ export function ProfileDropdown() {
             className="object-cover w-full h-full"
           />
         </div>
-        <Icon
-          icon="mdi:chevron-down"
-          className="text-on-surface-variant text-xl transition-transform duration-200"
+        <ChevronDown
+          className="text-on-surface-variant w-5 h-5 transition-transform duration-200"
           style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
         />
       </button>
@@ -42,13 +44,15 @@ export function ProfileDropdown() {
       {open && (
         <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-surface-container-high border border-white/5 shadow-2xl shadow-black/30 overflow-hidden origin-top-right animate-in fade-in zoom-in-95">
           <div className="px-4 py-3 border-b border-white/5">
-            <p className="text-sm font-bold text-on-surface">Doni</p>
+            <p className="text-sm font-bold text-on-surface">
+              {user?.staff?.details?.fullname}
+            </p>
             <p className="text-[11px] text-on-surface-variant">
-              doni@alfascorpii.id
+              {user?.username}
             </p>
           </div>
           <div className="py-1">
-            <button
+            {/*<button
               onClick={() => {
                 setOpen(false);
                 router.push("/portal/profile");
@@ -57,15 +61,15 @@ export function ProfileDropdown() {
             >
               <Icon icon="mdi:account-cog" className="text-lg" />
               Profil
-            </button>
+            </button>*/}
             <button
               onClick={() => {
                 setOpen(false);
-                router.replace("/login");
+                logout();
               }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface-variant hover:text-red-400 hover:bg-surface-container-lowest transition-colors"
             >
-              <Icon icon="mdi:logout" className="text-lg" />
+              <LogOut className="w-4 h-4" />
               Keluar
             </button>
           </div>
