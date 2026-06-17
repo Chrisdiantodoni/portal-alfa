@@ -6,4 +6,5 @@ export const ENDPOINTS = {
   change_password: `${API_URL}/auth/change-password`,
   me: `${API_URL}/me`,
   portals: `${API_URL}/registered-apps"`,
+  ticketPortal: `${API_URL}/sso/generate-ticket`,
 };

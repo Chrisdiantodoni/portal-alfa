@@ -175,7 +175,7 @@ export const api = {
     return response.data;
   },
 
-  post: <T>(url: string, body: any, token?: string) =>
+  post: <T>(url: string, body?: any, token?: string) =>
     baseFetch<T>(url, { method: "POST", body, token }),
 
   postFormData: <T>(url: string, body: FormData, token?: string) =>

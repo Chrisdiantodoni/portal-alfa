@@ -1,14 +1,46 @@
+import { generateTicketPortal } from "@/lib/api/queries/portal";
 import { useAuth } from "@/lib/providers/AuthProvider";
 import { AccessibleApp } from "@/lib/types/user";
 import { Icon } from "@iconify/react";
+import { useMutation } from "@tanstack/react-query";
+import { useToast } from "./Toast";
 
 function PortalCard({ portal }: { portal: AccessibleApp }) {
   const { token } = useAuth();
+
+  const { toast } = useToast();
+
+  // const handleClickPortal = async () => {
+  //   try {
+  //     // 1. Minta tiket ke backend Portal
+  //     const response = await axios.post('/api/sso/generate-ticket');
+
+  //     // 2. Buka URL redirect di tab baru
+  //     window.open(response.data.redirect_url, '_blank');
+  //   } catch (error) {
+  //     console.error("Gagal melakukan SSO:", error);
+  //   }
+  // };
+
+  const { mutate } = useMutation({
+    mutationFn: async (portal: AccessibleApp) => {
+      const res = await generateTicketPortal(portal.id);
+      return res;
+    },
+    onSuccess: (res) => {
+      if (res.meta.code == 200) {
+        window.open(res.data, "_blank");
+      }
+    },
+    onError: (error) => {
+      console.error("Gagal melakukan SSO:", error);
+      toast("Gagal melakukan SSO: " + error.message);
+    },
+  });
+
   return (
-    <a
-      href={`${portal.portal_url}?token=${token}`}
-      target="_blank"
-      rel="noopener noreferrer"
+    <button
+      onClick={() => mutate(portal)}
       className="group relative p-6 rounded-3xl bg-surface-container-low/70 backdrop-blur-md hover:shadow-lg hover:shadow-primary/5 hover:scale-[1.01] transition-all duration-500 cursor-pointer"
     >
       <div className="flex items-start gap-4">
@@ -40,7 +72,7 @@ function PortalCard({ portal }: { portal: AccessibleApp }) {
           className="text-primary text-lg opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0"
         />
       </div>
-    </a>
+    </button>
   );
 }
 
