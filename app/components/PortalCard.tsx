@@ -10,26 +10,14 @@ function PortalCard({ portal }: { portal: AccessibleApp }) {
 
   const { toast } = useToast();
 
-  // const handleClickPortal = async () => {
-  //   try {
-  //     // 1. Minta tiket ke backend Portal
-  //     const response = await axios.post('/api/sso/generate-ticket');
-
-  //     // 2. Buka URL redirect di tab baru
-  //     window.open(response.data.redirect_url, '_blank');
-  //   } catch (error) {
-  //     console.error("Gagal melakukan SSO:", error);
-  //   }
-  // };
-
   const { mutate } = useMutation({
     mutationFn: async (portal: AccessibleApp) => {
       const res = await generateTicketPortal(portal.id);
       return res;
     },
     onSuccess: (res) => {
-      if (res.meta.code == 200) {
-        window.open(res.data, "_blank");
+      if (res.meta.code === 200) {
+        window.open(res.data.redirect_url, "_blank");
       }
     },
     onError: (error) => {
@@ -40,6 +28,7 @@ function PortalCard({ portal }: { portal: AccessibleApp }) {
 
   return (
     <button
+      type="button"
       onClick={() => mutate(portal)}
       className="group relative p-6 rounded-3xl bg-surface-container-low/70 backdrop-blur-md hover:shadow-lg hover:shadow-primary/5 hover:scale-[1.01] transition-all duration-500 cursor-pointer"
     >
